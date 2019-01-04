@@ -1,6 +1,6 @@
 # Maze Solver
-An application for visualizing graph theory based algorithms in a maze environment.
-
+An applicaiton for visualizing the basic uniformed search algorithms,
+depth-first and breadth-first.
 
 ## Screenshot
 ![Maze Solver](maze-solver.gif)
