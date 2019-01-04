@@ -173,7 +173,6 @@
     ];
 
     class Cell {
-
       constructor(x, y, val) {
         this.x = x;
         this.y = y;
@@ -191,7 +190,6 @@
     }
 
     class Maze {
-
       constructor(matrix) {
         this.matrix = matrix;
         this.V = 0;
@@ -250,7 +248,6 @@
     }
 
     class MazeCanvas {
-
       constructor(parent, maze) {
         this.maze = maze;
         this.canvas = document.createElement('canvas');
@@ -268,21 +265,13 @@
         this.ctx.clearRect(x * TILE_SZ, y * TILE_SZ, TILE_SZ, TILE_SZ);
       }
 
-      fillCell(
-        x, y,
-        strokeColor = COLOR.PURPLE,
-        fillColor = COLOR.LIGHT_PURPLE
-      ) {
+      fillCell(x, y, strokeColor = COLOR.PURPLE, fillColor = COLOR.LIGHT_PURPLE) {
         const { TILE_SZ } = this;
         this.ctx.fillStyle = fillColor;
         this.ctx.fillRect(x * TILE_SZ, y * TILE_SZ, TILE_SZ, TILE_SZ);
       }
 
-      async renderCell(
-        pos,
-        fillColor = COLOR.PURPLE,
-        strokeStyle = COLOR.LIGHT_PURPLE
-      ) {
+      async renderCell(pos, fillColor = COLOR.PURPLE, strokeStyle = COLOR.LIGHT_PURPLE) {
         const { TILE_SZ } = this;
         this.ctx.fillStyle = fillColor;
         this.ctx.strokeStyle = strokeStyle;
@@ -331,7 +320,8 @@
       onSelectEndCell() {
         this.canvas.addEventListener('click', (e) => {
           const clickPos = this.getMouseClickPos(e);
-          const x = clickPos[0], y = clickPos[1];
+          const x = clickPos[0];
+          const y = clickPos[1];
           const matrix = this.maze.matrix;
           if (matrix[y][x] !== W) {
             this.clearCell(this.targetCell[0], this.targetCell[1]);
@@ -359,7 +349,6 @@
     }
 
     class PathAnimation {
-
       constructor(canvas) {
         this.canvas = canvas;
         this.frameRate = 90;
@@ -401,7 +390,6 @@
     }
 
     class DFSAnimation extends PathAnimation {
-
       constructor(canvas) {
         super(canvas);
       }
@@ -422,7 +410,6 @@
     }
 
     class BFSAnimation extends PathAnimation {
-
       constructor(canvas) {
         super(canvas);
       }
