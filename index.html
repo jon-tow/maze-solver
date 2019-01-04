@@ -1,0 +1,507 @@
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Maze Solver</title>
+
+  <!-- Maze Solver Styling. -->
+  <style>
+    :root {
+      --main-color: rgb(97, 55, 248);
+      --secondary-color: rgb(238, 238, 238);
+      --tertiary-color: #9b80fe;
+      --text-color: rgb(85, 84, 84);
+      --background-color: #F8F8F8;
+      --inner-shadow: inset 0 0 8px rgba(51, 45, 41, 0.3);
+      --outer-shadow: 1px 1px 8px rgba(51, 45, 41, 0.4);
+      --board-border: 4px solid rgb(122, 98, 255);
+    }
+
+    html {
+      height: 100vh;
+    }
+
+    body {
+      margin: 0 auto;
+      width: 100vw;
+      height: 100vh;
+      font-family: 'Avenir', 'Helvetica', sans-serif;
+      color: var(--text-color);
+      background-color: white;
+    }
+
+    main {
+      display: grid;
+      grid-auto-rows: auto;
+      grid-template-areas: ". header header ."". info-div info-div ."". maze-div maze-div ."". controller-div controller-div .";
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    header {
+      grid-area: header;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: flex-end;  
+      width: 100%;
+    }
+
+    .info-div {
+      grid-area: info-div;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+      height: 40px;
+    }
+    
+    .info-p {
+      text-align: center;
+    }
+
+    .maze-div {
+      grid-area: maze-div;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+    }
+
+    canvas {
+      border-radius: 4px;
+      box-shadow: var(--outer-shadow);
+
+    }
+
+    .controller-div {
+      grid-area: controller-div;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-evenly;
+      align-items: center;
+      width: 100%;
+      height: 60px;
+    }
+
+    button {
+      min-width: 125px;
+      height: 50px;
+      border: none;
+      border-radius: 5px;
+      background-color: white;
+      color: var(--tertiary-color);
+      outline: 0;
+      font-size: 1em;
+      text-transform: uppercase;
+    }
+
+    button:active {
+      background-color: var(--secondary-color);
+      box-shadow: var(--inner-shadow);
+    }
+
+    button:disabled {
+      color: var(--text-color);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Maze Solver Layout -->
+  <main>
+    <header>
+      <h1>Maze-Solver</h1>
+    </header>
+    <div class="maze-div" id="maze-div"></div>
+    <div class="info-div" id="info-div">
+      <p class="info-p">
+        Click anywhere on the path to set the agent's target, <br />
+        then choose an algorithm to find the path there.
+      </p>
+    </div>
+    <div class="controller-div" id="controller-div">
+      <button id="depth-first">Depth <br /> First</button>
+      <button id="clear">CLEAR</button>
+      <button id="breadth-first">Breadth <br /> First</button>
+    </div>
+  </main>
+
+  <!-- Maze Solver Script -->
+  <script type="text/javascript">
+
+    // Short helper functions
+    const getById = (id) => document.getElementById(id);
+    const createElt = (el) => document.createElement(el);
+    const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Global Canvas Colors
+    const COLOR = {
+      WHITE: 'white',
+      PURPLE: '#cfc1ff',
+      LIGHT_PURPLE: '#6137f8',
+      GREY: '#666666',
+      LIGHT_GREY: '#b2b2b2',
+      DARK_GREEN: '#54ad64',
+      LIGHT_GREEN: '#9effaf',
+      NEON_GREEN: '#68ff7a',
+    }
+
+    // Global Constants
+    const W = 0; // Wall
+    const O = 1; // Open 
+    const S = 2; // Start
+
+    const defaultMaze = [
+      [W, S, W, W, W, W, W, W, W, W, W, W, W, W, W],
+      [W, O, O, O, W, O, O, W, O, O, O, O, O, O, W],
+      [W, O, W, O, W, O, W, W, O, W, W, W, W, O, W],
+      [W, O, W, O, O, O, W, O, O, O, W, O, O, O, W],
+      [W, W, O, O, W, O, W, O, W, O, W, W, W, W, W],
+      [W, W, O, W, W, O, O, O, W, O, O, O, O, O, W],
+      [W, O, O, O, W, O, W, W, W, O, W, W, W, O, W],
+      [W, O, W, O, W, O, O, O, W, W, W, W, W, O, W],
+      [W, O, W, O, O, O, W, W, W, O, O, W, O, O, W],
+      [W, W, W, O, W, O, O, O, W, W, O, W, W, O, W],
+      [W, O, O, O, W, W, W, O, W, W, O, O, W, O, W],
+      [W, W, W, O, O, O, O, O, O, O, O, W, W, O, W],
+      [W, W, W, W, W, W, W, W, W, W, W, W, W, O, W],
+    ];
+
+    class Cell {
+
+      constructor(x, y, val) {
+        this.x = x;
+        this.y = y;
+        this.val = val;
+      }
+
+      static getPos(key) {
+        let pos = key.split(',');
+        return { x: pos[1], y: pos[0] }; // Invert for canvas rendering
+      }
+
+      get key() {
+        return this.x + ',' + this.y;
+      }
+    }
+
+    class Maze {
+
+      constructor(matrix) {
+        this.matrix = matrix;
+        this.V = 0;
+        this.E = 0;
+        this.adj = new Map();
+        this.start = new Cell();
+        this.buildMaze(matrix);
+      }
+
+      buildMaze(mat) {
+        let { V, addEdge } = this;
+        const rows = mat.length;
+        const cols = mat[0].length;
+        for (let i = 0; i < rows; i++) {
+          for (let j = 0; j < cols; j++) {
+            let val = mat[i][j];
+            if (val === W) { continue; }
+            let c = new Cell(i, j, val);
+            if (mat[i][j] === S) { this.start = c; }
+            this.addNeighbors(v, i, j, cols, rows, mat);
+            V++;
+          }
+        }
+      }
+
+      addNeighbors(v, i, j, cols, rows, mat) {
+        let rightCell = (j + 1 < cols) ? mat[i][j + 1] : W;
+        this.addNeighbor(v, rightCell, i, j + 1);
+        let belowCell = (i + 1 < rows) ? mat[i + 1][j] : W;
+        this.addNeighbor(v, belowCell, i + 1, j);
+      }
+
+      addNeighbor(v, neighborVal, i, j) {
+        if (neighborVal != W) {
+          let w = new Cell(i, j, neighborVal);
+          this.addEdge(v, w)
+        }
+      }
+
+      addEdge(v, w) {
+        let { adj } = this;
+        let vEdges = (adj.get(v.key) === undefined) ? [w] : [...adj.get(v.key), w];
+        let wEdges = (adj.get(w.key) === undefined) ? [v] : [...adj.get(w.key), v];
+        this.adj.set(v.key, vEdges);
+        this.adj.set(w.key, wEdges);
+        this.E++;
+      }
+
+      getMatrix() {
+        return this.matrix;
+      }
+
+      getStart() {
+        return this.start.key;
+      }
+    }
+
+    class MazeCanvas {
+
+      constructor(parent, maze) {
+        this.maze = maze;
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = 375;
+        this.canvas.height = 325;
+        parent.appendChild(this.canvas);
+        this.onSelectEndCell();
+        this.ctx = this.canvas.getContext('2d');
+        this.TILE_SZ = 25;
+        this.targetCell = [13, 12];
+      }
+
+      clearCell(x, y) {
+        const { TILE_SZ } = this;
+        this.ctx.clearRect(x * TILE_SZ, y * TILE_SZ, TILE_SZ, TILE_SZ);
+      }
+
+      fillCell(
+        x, y,
+        strokeColor = COLOR.PURPLE,
+        fillColor = COLOR.LIGHT_PURPLE
+      ) {
+        const { TILE_SZ } = this;
+        this.ctx.fillStyle = fillColor;
+        this.ctx.fillRect(x * TILE_SZ, y * TILE_SZ, TILE_SZ, TILE_SZ);
+      }
+
+      async renderCell(
+        pos,
+        fillColor = COLOR.PURPLE,
+        strokeStyle = COLOR.LIGHT_PURPLE
+      ) {
+        const { TILE_SZ } = this;
+        this.ctx.fillStyle = fillColor;
+        this.ctx.strokeStyle = strokeStyle;
+        this.ctx.beginPath();
+        const tileCenter = Math.floor(TILE_SZ / 2);
+        const xCenter = (pos.x * TILE_SZ) + tileCenter;
+        const yCenter = (pos.y * TILE_SZ) + tileCenter;
+        this.ctx.arc(xCenter, yCenter, 10, 0, 2 * Math.PI);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+      }
+
+      renderMaze() {
+        const { TILE_SZ } = this;
+        const matrix = this.maze.getMatrix();
+        const targetX = this.targetCell[0];
+        const targetY = this.targetCell[1];
+        const rows = matrix.length;
+        const cols = matrix[0].length;
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            if (matrix[y][x] === W) {
+              this.fillCell(x, y, COLOR.LIGHT_GREY, COLOR.GREY);
+            } else if (matrix[y][x] === O && x === targetX && y === targetY) {
+              this.fillCell(x, y, COLOR.LIGHT_GREY, COLOR.NEON_GREEN);
+            } else if (matrix[y][x] === O) {
+              this.fillCell(x, y, COLOR.LIGHT_GREY, COLOR.WHITE);
+            } else if (matrix[y][x] === S) {
+              this.fillCell(x, y, COLOR.PURPLE, COLOR.PURPLE);
+            }
+          }
+        }
+      }
+
+      clear() {
+        const { width, height } = this;
+        this.ctx.clearRect(0, 0, width, height);
+      }
+
+      clearAndRender() {
+        this.clear();
+        this.renderMaze();
+      }
+
+      onSelectEndCell() {
+        this.canvas.addEventListener('click', (e) => {
+          const clickPos = this.getMouseClickPos(e);
+          const x = clickPos[0], y = clickPos[1];
+          const matrix = this.maze.matrix;
+          if (matrix[y][x] !== W) {
+            this.clearCell(this.targetCell[0], this.targetCell[1]);
+            this.targetCell = [x, y];
+            this.fillCell(x, y, COLOR.LIGHT_GREY, COLOR.NEON_GREEN);
+          }
+        }, false);
+      }
+
+      getMouseClickPos(e) {
+        const { TILE_SZ } = this;
+        const { offsetLeft, offsetTop } = this.canvas;
+        const xLoc = e.clientX - offsetLeft;
+        const yLoc = e.clientY - offsetTop;
+        // Normalize mouse locations to be their corresponding cell number.
+        const x = Math.floor(xLoc / TILE_SZ);
+        const y = Math.floor(yLoc / TILE_SZ);
+        return [x, y]
+      }
+
+      getTargetPos() {
+        const { targetCell } = this;
+        return targetCell[1] + ',' + targetCell[0];
+      }
+    }
+
+    class PathAnimation {
+
+      constructor(canvas) {
+        this.canvas = canvas;
+        this.frameRate = 90;
+        this.marked = new Map(); // Stores all visited cells on search route.
+        this.edgeTo = new Map(); // Stores paths to each cell as a tree of edges.
+      }
+
+      // Search all paths in the maze starting from Cell, v.
+      async search(maze, v) { }
+
+      // Walks the path from some Cell from, to another vector, to.
+      async pathTo(from, to) {
+        let path = await this.buildPath(from, to);
+        this.renderPath(path);
+      }
+
+      async buildPath(from, to) {
+        const { edgeTo } = this;
+        let path = [];
+        for (let x = to; x !== from; x = edgeTo.get(x)) {
+          path.push(x);
+        }
+        path.push(from);
+        path = path.reverse();
+        return path;
+      }
+
+      async renderPath(path) {
+        const { frameRate, canvas } = this;
+        for (let v of path) {
+          await wait(frameRate).then(() => {
+            canvas.renderCell(
+              Cell.getPos(v),
+              COLOR.LIGHT_GREEN,
+              COLOR.DARK_GREEN);
+          });
+        }
+      }
+    }
+
+    class DFSAnimation extends PathAnimation {
+
+      constructor(canvas) {
+        super(canvas);
+      }
+
+      async search(maze, v) {
+        const { frameRate, canvas } = this;
+        let { marked, edgeTo } = this;
+        let vAdj = maze.adj.get(v);
+        marked.set(v, true);
+        await canvas.renderCell(Cell.getPos(v));
+        for (let w of vAdj) {
+          if (marked.get(w.key) === undefined) {
+            await edgeTo.set(w.key, v);
+            await wait(frameRate).then(() => this.search(maze, w.key));
+          }
+        }
+      }
+    }
+
+    class BFSAnimation extends PathAnimation {
+
+      constructor(canvas) {
+        super(canvas);
+      }
+
+      async search(maze, s) {
+        const { frameRate } = this;
+        let { marked, edgeTo, canvas } = this;
+        let queue = [];
+        marked.set(s, true);
+        await canvas.renderCell(Cell.getPos(s));
+        queue.push(s);
+        while (queue.length !== 0) {
+          let v = queue.shift(); // pop
+          let vAdj = maze.adj.get(v);
+          for (let w of vAdj) {
+            if (marked.get(w.key) === undefined) {
+              edgeTo.set(w.key, v);
+              marked.set(w.key, true);
+              await wait(frameRate).then(() => canvas.renderCell(Cell.getPos(w.key)));
+              queue.push(w.key);
+            }
+          }
+        }
+      }
+    }
+
+    // Canvas and Maze Globals
+    const MAZE = new Maze(defaultMaze);
+    const MAZE_DIV = getById('maze-div');
+    const CANVAS = new MazeCanvas(MAZE_DIV, MAZE);
+
+    function run() {
+      initBtnHandlers();
+      CANVAS.renderMaze();
+    }
+
+    // Button Globals
+    const CLEAR_BTN = getById('clear');
+    const DFS_BTN = getById('depth-first');
+    const BFS_BTN = getById('breadth-first');
+
+    function initBtnHandlers() {
+      DFS_BTN.onclick = animateDFS;
+      BFS_BTN.onclick = animateBFS;
+      CLEAR_BTN.onclick = clear;
+    }
+
+    async function animateDFS() {
+      let path = new DFSAnimation(CANVAS);
+      animate(path);
+    }
+
+    async function animateBFS() {
+      let path = new BFSAnimation(CANVAS);
+      animate(path);
+    }
+
+    async function animate(path) {
+      disableBtns(true);
+      CANVAS.clearAndRender();
+      await path.search(MAZE, MAZE.getStart());
+      await path.pathTo(MAZE.getStart(), CANVAS.getTargetPos());
+      await disableBtns(false);
+    }
+
+    function clear() {
+      CANVAS.clearAndRender();
+    }
+
+    function disableBtns(doDisable) {
+      DFS_BTN.disabled = doDisable;
+      BFS_BTN.disabled = doDisable;
+      CLEAR_BTN.disabled = doDisable;
+    }
+
+    // Run the Application
+    run();
+
+  </script>
+</body>
+
+</html>
