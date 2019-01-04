@@ -209,7 +209,7 @@
             if (val === W) { continue; }
             let c = new Cell(i, j, val);
             if (mat[i][j] === S) { this.start = c; }
-            this.addNeighbors(v, i, j, cols, rows, mat);
+            this.addNeighbors(c, i, j, cols, rows, mat);
             V++;
           }
         }
