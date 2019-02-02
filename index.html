@@ -254,10 +254,10 @@
         this.canvas.width = 375;
         this.canvas.height = 325;
         parent.appendChild(this.canvas);
-        this.onSelectEndCell();
         this.ctx = this.canvas.getContext('2d');
-        this.TILE_SZ = 25;
+        this.addSelectTargetHandler();
         this.targetCell = [13, 12];
+        this.TILE_SZ = 25;
       }
 
       clearCell(x, y) {
@@ -317,7 +317,7 @@
         this.renderMaze();
       }
 
-      onSelectEndCell() {
+      addSelectTargetHandler() {
         this.canvas.addEventListener('click', (e) => {
           const clickPos = this.getMouseClickPos(e);
           const x = clickPos[0];
@@ -352,7 +352,7 @@
       constructor(canvas) {
         this.canvas = canvas;
         this.frameRate = 90;
-        this.marked = new Map(); // Stores all visited cells on search route.
+        this.visited = new Map(); // Stores all visited cells on search route.
         this.edgeTo = new Map(); // Stores paths to each cell as a tree of edges.
       }
 
@@ -396,12 +396,12 @@
 
       async search(maze, v) {
         const { frameRate, canvas } = this;
-        let { marked, edgeTo } = this;
+        let { visited, edgeTo } = this;
         let vAdj = maze.adj.get(v);
-        marked.set(v, true);
+        visited.set(v, true);
         await canvas.renderCell(Cell.getPos(v));
         for (let w of vAdj) {
-          if (marked.get(w.key) === undefined) {
+          if (visited.get(w.key) === undefined) {
             await edgeTo.set(w.key, v);
             await wait(frameRate).then(() => this.search(maze, w.key));
           }
@@ -416,18 +416,18 @@
 
       async search(maze, s) {
         const { frameRate } = this;
-        let { marked, edgeTo, canvas } = this;
+        let { visited, edgeTo, canvas } = this;
         let queue = [];
-        marked.set(s, true);
+        visited.set(s, true);
         await canvas.renderCell(Cell.getPos(s));
         queue.push(s);
         while (queue.length !== 0) {
           let v = queue.shift(); // pop
           let vAdj = maze.adj.get(v);
           for (let w of vAdj) {
-            if (marked.get(w.key) === undefined) {
+            if (visited.get(w.key) === undefined) {
               edgeTo.set(w.key, v);
-              marked.set(w.key, true);
+              visited.set(w.key, true);
               await wait(frameRate).then(() => canvas.renderCell(Cell.getPos(w.key)));
               queue.push(w.key);
             }
@@ -436,12 +436,12 @@
       }
     }
 
-    // Canvas and Maze Globals
+    // Maze and Canvas Globals    
     const MAZE = new Maze(defaultMaze);
     const MAZE_DIV = getById('maze-div');
     const CANVAS = new MazeCanvas(MAZE_DIV, MAZE);
 
-    function run() {
+    function init() {
       initBtnHandlers();
       CANVAS.renderMaze();
     }
@@ -485,8 +485,8 @@
       CLEAR_BTN.disabled = doDisable;
     }
 
-    // Run the Application
-    run();
+    // Initialize the Application
+    init();
 
   </script>
 </body>
