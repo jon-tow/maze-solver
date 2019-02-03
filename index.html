@@ -34,11 +34,11 @@
 
     main {
       display: grid;
-      grid-auto-rows: auto;
+      grid-auto-rows: auto;      
       grid-template-areas: ". header header ."". info-div info-div ."". maze-div maze-div ."". controller-div controller-div .";
       justify-content: center;
       align-items: center;    
-      height: 100vh;
+      height: 90vh;
     }
 
     header {
@@ -47,6 +47,8 @@
       flex-direction: row;
       justify-content: center;
       align-items: center;
+      max-height: 80px;
+      margin-top: 1em;
     }
 
     .info-div {
@@ -55,6 +57,8 @@
       flex-direction: row;
       justify-content: center;
       align-items: flex-start;
+      max-height: 70px;
+
     } 
 
     .info-p {
