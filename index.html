@@ -333,9 +333,9 @@
 
       getMouseClickPos(e) {
         const { TILE_SZ } = this;
-        const { offsetLeft, offsetTop } = this.canvas;
-        const xLoc = e.clientX - offsetLeft;
-        const yLoc = e.clientY - offsetTop;
+        let offset = this.canvas.getBoundingClientRect();
+        const xLoc = e.clientX - offset.left;
+        const yLoc = e.clientY - offset.top;
         // Normalize mouse locations to be their corresponding cell number.
         const x = Math.floor(xLoc / TILE_SZ);
         const y = Math.floor(yLoc / TILE_SZ);
