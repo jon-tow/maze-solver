@@ -1,5 +1,5 @@
 # Maze Solver
-An applicaiton for visualizing the basic uniformed search algorithms,
+An applicaiton for visualizing the basic uninformed search algorithms,
 depth-first and breadth-first.
 
 ## Screenshot
